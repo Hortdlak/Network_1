@@ -1,4 +1,6 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
+using System.Threading.Tasks;
 using NetworkingCommon;
 
 namespace NetworkingClient
@@ -19,16 +21,30 @@ namespace NetworkingClient
             string? input;
             var message = new Message("", "Сергей", "Сервер");
 
-            do
+            try
             {
-                Console.WriteLine("Введите сообщение или нажмите 'exit'");
-                input = Console.ReadLine();
-                message._text = input;
-                await UdpHelper.SendAsync(message, _serverEndPoint);
+                do
+                {
+                    Console.WriteLine("Введите сообщение или 'exit'");
+                    input = Console.ReadLine();
+                    if (input?.Equals("exit", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        throw new OperationCanceledException("Клиент завершил работу");
+                    }
 
-                var responseMessage = await UdpHelper.ReceiveAsync(_receivePort);
-                input = responseMessage?._text?.ToLower();
-            } while (!input!.Equals("сервер выключен", StringComparison.OrdinalIgnoreCase));
+                    message._text = input;
+                    await UdpHelper.SendAsync(message, _serverEndPoint);
+
+                    var responseMessage = await UdpHelper.ReceiveAsync(_receivePort);
+                    input = responseMessage?._text?.ToLower();
+                } while (!input!.Equals("сервер выключен", StringComparison.OrdinalIgnoreCase));
+            }
+            catch (OperationCanceledException ex)
+            {
+                Console.WriteLine(ex.Message);
+                message._text = "exit";
+                await UdpHelper.SendAsync(message, _serverEndPoint);
+            }
         }
     }
 }
